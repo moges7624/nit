@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 
 	"github.com/moges7624/nit/objects"
+	"github.com/moges7624/nit/refs"
 	"github.com/moges7624/nit/repo"
 )
 
 func Commit(args []string) {
-	// if len(args) < 1 || args[0] != "-m" || args[1] != "" {
 	if len(args) < 1 || args[0] != "-m" || args[1] == "" {
 		fmt.Fprintf(os.Stderr, "Usage: nit commit -m <message>\n")
 		return
@@ -75,12 +75,12 @@ func Commit(args []string) {
 		return
 	}
 
-	err = os.WriteFile(filepath.Join(repo.NitDir, ".git/refs/heads/main"),
-		[]byte(commitHash),
-		0o755,
-	)
+	ref := refs.NewRef(filepath.Join(wd, ".git/"))
+	err = ref.UpdateHead(commitHash)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error updating head: %v", err.Error())
 		return
 	}
+
+	fmt.Printf("[main %x] %s\n", commitHash[:7], message)
 }

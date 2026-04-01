@@ -43,6 +43,16 @@ func Init(args []string) {
 		}
 	}
 
+	f, err := os.OpenFile(filepath.Join(nitPath, "refs/heads/main"),
+		os.O_CREATE,
+		0o644,
+	)
+	if err != nil {
+		fmt.Printf("Error creating main: %v\n", err)
+		return
+	}
+	defer f.Close()
+
 	// Write the initial HEAD file
 	err = os.WriteFile(filepath.Join(nitPath, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
 	if err != nil {

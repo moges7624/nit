@@ -10,6 +10,14 @@ import (
 )
 
 func Commit(args []string) {
+	// if len(args) < 1 || args[0] != "-m" || args[1] != "" {
+	if len(args) < 1 || args[0] != "-m" || args[1] == "" {
+		fmt.Fprintf(os.Stderr, "Usage: nit commit -m <message>\n")
+		return
+	}
+
+	message := args[1]
+
 	wd, err := os.Getwd()
 	if err != nil {
 		return
@@ -48,9 +56,31 @@ func Commit(args []string) {
 		Entries: treeEntries,
 	}
 
-	_, err = objects.Store(repo, tree)
+	treeHash, err := objects.Store(repo, tree)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error writing tree to a disk: %v", err.Error())
+		return
+	}
+
+	commit := &objects.Commit{
+		Tree:      treeHash,
+		Author:    "john <john@mail.com>",
+		Committer: "john <john@mail.com>",
+		Message:   message,
+	}
+
+	commitHash, err := objects.Store(repo, commit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error writing commit to a disk: %v", err.Error())
+		return
+	}
+
+	err = os.WriteFile(filepath.Join(repo.NitDir, ".git/refs/heads/main"),
+		[]byte(commitHash),
+		0o755,
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error updating head: %v", err.Error())
 		return
 	}
 }

@@ -23,6 +23,7 @@ func Commit(args []string) {
 		return
 	}
 
+	var treeEntries []objects.Entry
 	for _, file := range files {
 		data, err := os.ReadFile(filepath.Join(repo.NitDir, file.Name()))
 		if err != nil {
@@ -31,10 +32,25 @@ func Commit(args []string) {
 		}
 
 		blob := objects.NewBlob(data)
-		_, err = objects.Store(repo, blob)
+		hash, err := objects.Store(repo, blob)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error creating file: %v", err.Error())
 			return
 		}
+
+		treeEntries = append(treeEntries, objects.Entry{
+			Name: file.Name(),
+			Hash: hash,
+		})
+	}
+
+	tree := &objects.Tree{
+		Entries: treeEntries,
+	}
+
+	_, err = objects.Store(repo, tree)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error writing tree to a disk: %v", err.Error())
+		return
 	}
 }

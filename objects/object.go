@@ -34,7 +34,6 @@ func Store(repo *repo.Repository, obj Object) (string, error) {
 	}
 
 	path := filepath.Join(dir, hash[2:])
-	fmt.Println(path)
 	if _, err = os.Stat(path); err == nil {
 		return hash, nil
 	}
@@ -60,5 +59,5 @@ func Store(repo *repo.Repository, obj Object) (string, error) {
 	defer f.Close()
 
 	f.Write(buf.Bytes())
-	return "", nil
+	return hash, nil
 }

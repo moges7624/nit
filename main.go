@@ -20,7 +20,6 @@ func main() {
 		commands.Commit(args)
 
 	default:
-		fmt.Println(cmd)
 		fmt.Printf("nit: '%s' is not a nit command.\n", cmd)
 	}
 }

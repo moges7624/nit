@@ -12,8 +12,13 @@ func main() {
 	args := os.Args[2:]
 
 	switch cmd {
+
 	case "init":
 		commands.Init(args)
+
+	case "commit":
+		commands.Commit(args)
+
 	default:
 		fmt.Println(cmd)
 		fmt.Printf("nit: '%s' is not a nit command.\n", cmd)

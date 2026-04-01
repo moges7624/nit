@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -69,18 +70,37 @@ func Commit(args []string) {
 		Message:   message,
 	}
 
+	ref := refs.NewRef(filepath.Join(wd, ".git/"))
+	par, err := ref.GetHead()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err.Error())
+		return
+	}
+
+	if par != "" {
+		commit.Parent = par
+	}
+
 	commitHash, err := objects.Store(repo, commit)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error writing commit to a disk: %v", err.Error())
 		return
 	}
 
-	ref := refs.NewRef(filepath.Join(wd, ".git/"))
 	err = ref.UpdateHead(commitHash)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error updating head: %v", err.Error())
 		return
 	}
 
-	fmt.Printf("[main %x] %s\n", commitHash[:7], message)
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "[main ")
+
+	if par == "" {
+		fmt.Fprintf(&buf, "(root-commit) ")
+	}
+
+	fmt.Fprintf(&buf, "%s] %s\n", commitHash[:7], message)
+
+	fmt.Println(buf.String())
 }

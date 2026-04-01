@@ -42,6 +42,20 @@ func (r Ref) UpdateHead(hashHex string) error {
 	return nil
 }
 
+func (r *Ref) GetHead() (string, error) {
+	headPath, err := r.GetHeadPath()
+	if err != nil {
+		return "", nil
+	}
+
+	h, err := os.ReadFile(filepath.Join(r.nitDir, headPath))
+	if err != nil {
+		return "", fmt.Errorf("error getting head: %s", err.Error())
+	}
+
+	return string(h), err
+}
+
 func (r *Ref) GetHeadPath() (string, error) {
 	if r.head != "" {
 		return r.head, nil

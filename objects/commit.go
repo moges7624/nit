@@ -9,6 +9,7 @@ import (
 
 type Commit struct {
 	Tree      string
+	Parent    string
 	Author    string
 	Committer string
 	Message   string
@@ -26,6 +27,10 @@ func (c Commit) Serialize() ([]byte, error) {
 
 	timeStamp := time.Now().Unix()
 	timeZone := time.Now().Format("-0700")
+
+	if c.Parent != "" {
+		fmt.Fprintf(&buf, "parent %s\n", c.Parent)
+	}
 
 	fmt.Fprintf(&buf, "author %s %d %s\n", c.Author, timeStamp, timeZone)
 	fmt.Fprintf(&buf, "committer %s %d %s\n", c.Committer, timeStamp, timeZone)

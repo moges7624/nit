@@ -118,7 +118,7 @@ func commitDir(repo repo.Repository, dir string) (string, error) {
 			treeEntries = append(treeEntries, objects.Entry{
 				Name: file.Name(),
 				Hash: treeHash,
-				Mode: "40000",
+				Mode: objects.Directory,
 			})
 
 		} else {
@@ -134,10 +134,21 @@ func commitDir(repo repo.Repository, dir string) (string, error) {
 				return "", err
 			}
 
+			fm := objects.Regular
+
+			fi, err := file.Info()
+			if err != nil {
+				return "", fmt.Errorf("error getting file info: %s", err.Error())
+			}
+
+			if fi.Mode()&0o111 != 0 {
+				fm = objects.Executable
+			}
+
 			treeEntries = append(treeEntries, objects.Entry{
 				Name: file.Name(),
 				Hash: blobHash,
-				Mode: "100644",
+				Mode: fm,
 			})
 		}
 	}

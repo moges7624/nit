@@ -8,10 +8,18 @@ import (
 	"sort"
 )
 
+type FileMode string
+
+var (
+	Directory  FileMode = "40000"
+	Executable FileMode = "100755"
+	Regular    FileMode = "100644"
+)
+
 type Entry struct {
 	Name string
 	Hash string
-	Mode string
+	Mode FileMode
 }
 
 type Tree struct {

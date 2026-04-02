@@ -11,6 +11,12 @@ import (
 	"github.com/moges7624/nit/repo"
 )
 
+var dirIgnoreList = map[string]bool{
+	".git": true,
+	".":    true,
+	"..":   true,
+}
+
 func Commit(args []string) {
 	if len(args) < 1 || args[0] != "-m" || args[1] == "" {
 		fmt.Fprintf(os.Stderr, "Usage: nit commit -m <message>\n")
@@ -26,55 +32,11 @@ func Commit(args []string) {
 
 	repo := repo.NewRepository(wd)
 
-	files, err := repo.ListFiles()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error getting list of files: %v", err.Error())
-		return
-	}
+	treeHash, _ := commitDir(*repo, repo.WorkDir)
 
-	var treeEntries []objects.Entry
-	for _, file := range files {
-		if file.IsDir() {
-			dirTreeHash, err := commitDir(*repo, filepath.Join(repo.WorkDir, file.Name()))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error commiting dir: %v", err.Error())
-				return
-			}
-
-			treeEntries = append(treeEntries, objects.Entry{
-				Name: file.Name(),
-				Hash: dirTreeHash,
-				Mode: "40000",
-			})
-		} else {
-
-			data, err := os.ReadFile(filepath.Join(repo.WorkDir, file.Name()))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error reading a file: %v", err.Error())
-				return
-			}
-
-			blobHash, err := commitBlob(repo, data)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v", err.Error())
-				return
-			}
-
-			treeEntries = append(treeEntries, objects.Entry{
-				Name: file.Name(),
-				Hash: blobHash,
-				Mode: "100644",
-			})
-		}
-	}
-
-	tree := &objects.Tree{
-		Entries: treeEntries,
-	}
-
-	treeHash, err := objects.Store(repo, tree)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error writing tree to a disk: %v", err.Error())
+	// emtpy dir
+	if treeHash == "" {
+		fmt.Println("nothing to commit")
 		return
 	}
 
@@ -138,22 +100,51 @@ func commitDir(repo repo.Repository, dir string) (string, error) {
 
 	var treeEntries []objects.Entry
 	for _, file := range files {
-		data, err := os.ReadFile(filepath.Join(dir, file.Name()))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error reading a file: %v", err.Error())
-			return "", fmt.Errorf("error reading file: %s", err.Error())
-		}
+		if file.IsDir() {
+			if dirIgnoreList[file.Name()] {
+				continue
+			}
 
-		blobHash, err := commitBlob(&repo, data)
-		if err != nil {
-			return "", err
-		}
+			treeHash, err := commitDir(repo, filepath.Join(dir, file.Name()))
+			if err != nil {
+				return "", fmt.Errorf("error commiting directory: %s", err.Error())
+			}
 
-		treeEntries = append(treeEntries, objects.Entry{
-			Name: file.Name(),
-			Hash: blobHash,
-			Mode: "100644",
-		})
+			// emtpy dir
+			if treeHash == "" {
+				continue
+			}
+
+			treeEntries = append(treeEntries, objects.Entry{
+				Name: file.Name(),
+				Hash: treeHash,
+				Mode: "40000",
+			})
+
+		} else {
+
+			data, err := os.ReadFile(filepath.Join(dir, file.Name()))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error reading a file: %v", err.Error())
+				return "", fmt.Errorf("error reading file: %s", err.Error())
+			}
+
+			blobHash, err := commitBlob(&repo, data)
+			if err != nil {
+				return "", err
+			}
+
+			treeEntries = append(treeEntries, objects.Entry{
+				Name: file.Name(),
+				Hash: blobHash,
+				Mode: "100644",
+			})
+		}
+	}
+
+	// emtpy directory
+	if len(treeEntries) == 0 {
+		return "", nil
 	}
 
 	tree := &objects.Tree{

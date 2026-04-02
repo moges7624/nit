@@ -34,23 +34,38 @@ func Commit(args []string) {
 
 	var treeEntries []objects.Entry
 	for _, file := range files {
-		data, err := os.ReadFile(filepath.Join(repo.NitDir, file.Name()))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error reading a file: %v", err.Error())
-			return
-		}
+		if file.IsDir() {
+			dirTreeHash, err := commitDir(*repo, filepath.Join(repo.WorkDir, file.Name()))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error commiting dir: %v", err.Error())
+				return
+			}
 
-		blob := objects.NewBlob(data)
-		hash, err := objects.Store(repo, blob)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error creating file: %v", err.Error())
-			return
-		}
+			treeEntries = append(treeEntries, objects.Entry{
+				Name: file.Name(),
+				Hash: dirTreeHash,
+				Mode: "40000",
+			})
+		} else {
 
-		treeEntries = append(treeEntries, objects.Entry{
-			Name: file.Name(),
-			Hash: hash,
-		})
+			data, err := os.ReadFile(filepath.Join(repo.WorkDir, file.Name()))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error reading a file: %v", err.Error())
+				return
+			}
+
+			blobHash, err := commitBlob(repo, data)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v", err.Error())
+				return
+			}
+
+			treeEntries = append(treeEntries, objects.Entry{
+				Name: file.Name(),
+				Hash: blobHash,
+				Mode: "100644",
+			})
+		}
 	}
 
 	tree := &objects.Tree{
@@ -103,4 +118,52 @@ func Commit(args []string) {
 	fmt.Fprintf(&buf, "%s] %s\n", commitHash[:7], message)
 
 	fmt.Println(buf.String())
+}
+
+func commitBlob(repo *repo.Repository, data []byte) (string, error) {
+	blob := objects.NewBlob(data)
+	hash, err := objects.Store(repo, blob)
+	if err != nil {
+		return "", fmt.Errorf("error writing blob to a disk: %s", err.Error())
+	}
+
+	return hash, nil
+}
+
+func commitDir(repo repo.Repository, dir string) (string, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return "", fmt.Errorf("error reading dir files: %s", err.Error())
+	}
+
+	var treeEntries []objects.Entry
+	for _, file := range files {
+		data, err := os.ReadFile(filepath.Join(dir, file.Name()))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error reading a file: %v", err.Error())
+			return "", fmt.Errorf("error reading file: %s", err.Error())
+		}
+
+		blobHash, err := commitBlob(&repo, data)
+		if err != nil {
+			return "", err
+		}
+
+		treeEntries = append(treeEntries, objects.Entry{
+			Name: file.Name(),
+			Hash: blobHash,
+			Mode: "100644",
+		})
+	}
+
+	tree := &objects.Tree{
+		Entries: treeEntries,
+	}
+
+	treeHash, err := objects.Store(&repo, tree)
+	if err != nil {
+		return "", fmt.Errorf("error writing tree to disk: %s", err.Error())
+	}
+
+	return treeHash, nil
 }

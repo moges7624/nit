@@ -27,7 +27,7 @@ func Store(repo *repo.Repository, obj Object) (string, error) {
 
 	hash, _ := obj.Hash()
 
-	dir := filepath.Join(repo.NitDir, ".git/objects/", hash[:2])
+	dir := filepath.Join(repo.WorkDir, ".git/objects/", hash[:2])
 
 	if err = os.MkdirAll(dir, 0o755); err != nil {
 		return "", nil

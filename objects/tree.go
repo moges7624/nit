@@ -11,6 +11,7 @@ import (
 type Entry struct {
 	Name string
 	Hash string
+	Mode string
 }
 
 type Tree struct {
@@ -29,7 +30,7 @@ func (t *Tree) Serialize() ([]byte, error) {
 
 	var buf bytes.Buffer
 	for _, entry := range t.Entries {
-		fmt.Fprintf(&buf, "100644 %s\x00", entry.Name)
+		fmt.Fprintf(&buf, "%s %s\x00", entry.Mode, entry.Name)
 		hashBytes, _ := hex.DecodeString(entry.Hash)
 		buf.Write(hashBytes)
 	}

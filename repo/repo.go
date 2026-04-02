@@ -6,17 +6,17 @@ import (
 )
 
 type Repository struct {
-	NitDir string
+	WorkDir string
 }
 
 func NewRepository(path string) *Repository {
 	return &Repository{
-		NitDir: path,
+		WorkDir: path,
 	}
 }
 
 func (r *Repository) ListFiles() ([]os.DirEntry, error) {
-	files, err := os.ReadDir(r.NitDir)
+	files, err := os.ReadDir(r.WorkDir)
 	if err != nil {
 		return nil, fmt.Errorf("error listing files in the working directory: %w", err)
 	}

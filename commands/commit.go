@@ -40,22 +40,21 @@ func Commit(args []string) {
 		return
 	}
 
-	commit := &objects.Commit{
-		Tree:      treeHash,
-		Author:    "john <john@mail.com>",
-		Committer: "john <john@mail.com>",
-		Message:   message,
-	}
+	commit := objects.NewCommit(
+		treeHash,
+		"john <john@mail.com>",
+		message,
+	)
 
 	ref := refs.NewRef(filepath.Join(wd, ".git/"))
-	par, err := ref.GetHead()
+	par, err := ref.GetHeadCommit()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err.Error())
 		return
 	}
 
 	if par != "" {
-		commit.Parent = par
+		commit.SetParent(par)
 	}
 
 	commitHash, err := objects.Store(repo, commit)

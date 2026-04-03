@@ -9,11 +9,24 @@ import (
 
 type Commit struct {
 	Tree      string
-	Parent    string
+	parent    string
 	Author    string
 	Committer string
 	Message   string
 	hash      string
+}
+
+func NewCommit(treeHash, author, message string) *Commit {
+	return &Commit{
+		Tree:      treeHash,
+		Author:    author,
+		Committer: author,
+		Message:   message,
+	}
+}
+
+func (c *Commit) SetParent(parent string) {
+	c.parent = parent
 }
 
 func (c Commit) Type() string {
@@ -28,8 +41,8 @@ func (c Commit) Serialize() ([]byte, error) {
 	timeStamp := time.Now().Unix()
 	timeZone := time.Now().Format("-0700")
 
-	if c.Parent != "" {
-		fmt.Fprintf(&buf, "parent %s\n", c.Parent)
+	if c.parent != "" {
+		fmt.Fprintf(&buf, "parent %s\n", c.parent)
 	}
 
 	fmt.Fprintf(&buf, "author %s %d %s\n", c.Author, timeStamp, timeZone)

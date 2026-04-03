@@ -42,7 +42,7 @@ func (r Ref) UpdateHead(hashHex string) error {
 	return nil
 }
 
-func (r *Ref) GetHead() (string, error) {
+func (r *Ref) GetHeadCommit() (string, error) {
 	headPath, err := r.GetHeadPath()
 	if err != nil {
 		return "", nil

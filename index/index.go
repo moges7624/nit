@@ -153,6 +153,11 @@ func (i *Index) Load() error {
 	i.Version = binary.BigEndian.Uint32(data[4:8])
 	entryLen := binary.BigEndian.Uint32(data[8:12])
 
+	checkSum := sha1.Sum(data[:len(data)-20])
+	if !bytes.Equal(checkSum[:], data[len(data)-20:]) {
+		return fmt.Errorf("checkSum does not match stored value")
+	}
+
 	// clear existing Entries
 	i.Entries = make(map[string]Entry, entryLen)
 

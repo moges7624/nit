@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"os"
+	"sort"
 	"syscall"
 	"time"
 )
@@ -86,15 +87,22 @@ func (i *Index) CreateEntry(pathname, objHash string, stat os.FileInfo) *Entry {
 }
 
 func (i *Index) Write() error {
+	entries := make([]Entry, 0, len(i.Entries))
+	for _, v := range i.Entries {
+		entries = append(entries, v)
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].name < entries[j].name
+	})
+
 	var buf bytes.Buffer
 
 	buf.WriteString("DIRC")
 	binary.Write(&buf, binary.BigEndian, i.Version)
 	binary.Write(&buf, binary.BigEndian, uint32(len(i.Entries)))
 
-	// sort Entries
-
-	for _, e := range i.Entries {
+	for _, e := range entries {
 		binary.Write(&buf, binary.BigEndian, e.CTimeSec)
 		binary.Write(&buf, binary.BigEndian, e.CTimeNSec)
 		binary.Write(&buf, binary.BigEndian, e.MTimeSec)
@@ -111,7 +119,7 @@ func (i *Index) Write() error {
 
 		buf.WriteString(e.name)
 
-		pad := (8 - (buf.Len() % 8)) % 8
+		pad := (8 - ((buf.Len() + 20) % 8)) % 8
 		for range pad {
 			buf.WriteByte(0)
 		}

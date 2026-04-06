@@ -21,25 +21,28 @@ func Add(args []string) {
 		return
 	}
 
-	data, err := os.ReadFile(filepath.Join(wd, args[0]))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading file: %v", err.Error())
-		return
-	}
-
-	blob := objects.NewBlob(data)
-	blobHash, _ := blob.Hash()
-
-	f, err := os.OpenFile(filepath.Join(wd, args[0]), os.O_RDONLY|os.O_EXCL, 0o444)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error opening file: %v", err.Error())
-		return
-	}
-	defer f.Close()
-
-	stat, _ := f.Stat()
-
 	index := index.NewIndex(filepath.Join(wd, ".git/index"))
-	index.Add(args[0], blobHash, stat)
+	for _, arg := range args {
+		data, err := os.ReadFile(filepath.Join(wd, arg))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error reading file: %v", err.Error())
+			return
+		}
+
+		blob := objects.NewBlob(data)
+		blobHash, _ := blob.Hash()
+
+		f, err := os.OpenFile(filepath.Join(wd, arg), os.O_RDONLY|os.O_EXCL, 0o444)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error opening file: %v", err.Error())
+			return
+		}
+		defer f.Close()
+
+		stat, _ := f.Stat()
+
+		index.Add(arg, blobHash, stat)
+	}
+
 	index.Write()
 }

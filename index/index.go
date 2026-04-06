@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"sort"
 	"syscall"
@@ -118,6 +119,7 @@ func (i *Index) Write() error {
 		binary.Write(&buf, binary.BigEndian, e.flags)
 
 		buf.WriteString(e.name)
+		buf.WriteByte(0)
 
 		pad := (8 - ((buf.Len() + 20) % 8)) % 8
 		for range pad {
@@ -129,4 +131,71 @@ func (i *Index) Write() error {
 	buf.Write(checksum[:])
 
 	return os.WriteFile(i.pathname, buf.Bytes(), 0o666)
+}
+
+func (i *Index) Load() error {
+	data, err := os.ReadFile(i.pathname)
+	if err != nil {
+		return err
+	}
+
+	if len(data) < 12 {
+		return fmt.Errorf("index file too small")
+	}
+
+	// parse header
+	sig := string(data[0:4])
+
+	if sig != "DIRC" {
+		return fmt.Errorf("invalid index signature: %s", sig)
+	}
+
+	i.Version = binary.BigEndian.Uint32(data[4:8])
+	entryLen := binary.BigEndian.Uint32(data[8:12])
+
+	// clear existing Entries
+	i.Entries = make(map[string]Entry, entryLen)
+
+	offset := 12
+
+	for range entryLen {
+		if offset+62 > len(data) {
+			return fmt.Errorf("truncated index entry")
+		}
+
+		e := Entry{}
+
+		e.CTimeSec = binary.BigEndian.Uint32(data[offset : offset+4])
+		e.CTimeSec = binary.BigEndian.Uint32(data[offset+4 : offset+8])
+		e.MTimeSec = binary.BigEndian.Uint32(data[offset+8 : offset+12])
+		e.MTimeNSec = binary.BigEndian.Uint32(data[offset+12 : offset+16])
+		e.Dev = binary.BigEndian.Uint32(data[offset+16 : offset+20])
+		e.Inod = binary.BigEndian.Uint32(data[offset+20 : offset+24])
+		e.Mode = binary.BigEndian.Uint32(data[offset+24 : offset+28])
+		e.UID = binary.BigEndian.Uint32(data[offset+28 : offset+32])
+		e.GID = binary.BigEndian.Uint32(data[offset+32 : offset+36])
+		e.Size = binary.BigEndian.Uint32(data[offset+36 : offset+40])
+
+		copy([]byte(e.objHash), data[offset+40:offset+60])
+		e.flags = binary.BigEndian.Uint16(data[offset+60 : offset+62])
+
+		offset += 62
+
+		// Read null-terminated name
+		nameEnd := bytes.IndexByte(data[offset:], 0)
+		if nameEnd == -1 {
+			return fmt.Errorf("malformed file name in index")
+		}
+
+		e.name = string(data[offset : offset+nameEnd])
+		offset += nameEnd + 1
+
+		// Skip padding to 8-byte boundary
+		pad := (8 - ((offset + 20) % 8)) % 8
+		offset += pad
+
+		i.Entries[e.name] = e
+	}
+
+	return nil
 }

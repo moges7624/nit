@@ -22,6 +22,8 @@ func Add(args []string) {
 	}
 
 	index := index.NewIndex(filepath.Join(wd, ".git/index"))
+	index.Load()
+
 	for _, arg := range args {
 		data, err := os.ReadFile(filepath.Join(wd, arg))
 		if err != nil {

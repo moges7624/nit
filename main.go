@@ -16,6 +16,9 @@ func main() {
 	case "init":
 		commands.Init(args)
 
+	case "add":
+		commands.Add(args)
+
 	case "commit":
 		commands.Commit(args)
 

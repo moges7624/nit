@@ -7,6 +7,7 @@ import (
 
 	"github.com/moges7624/nit/index"
 	"github.com/moges7624/nit/objects"
+	"github.com/moges7624/nit/repo"
 )
 
 func Add(args []string) {
@@ -21,6 +22,7 @@ func Add(args []string) {
 		return
 	}
 
+	repo := repo.NewRepository(wd)
 	index := index.NewIndex(filepath.Join(wd, ".git/index"))
 	err = index.Load()
 	if err != nil {
@@ -50,6 +52,12 @@ func Add(args []string) {
 		err = index.Add(arg, blobHash, stat)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error adding blob to index: %v", err.Error())
+			return
+		}
+
+		_, err = objects.Store(repo, blob)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error writing object to a disk: %v", err.Error())
 			return
 		}
 	}

@@ -47,7 +47,11 @@ func Add(args []string) {
 
 		stat, _ := f.Stat()
 
-		index.Add(arg, blobHash, stat)
+		err = index.Add(arg, blobHash, stat)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error adding blob to index: %v", err.Error())
+			return
+		}
 	}
 
 	index.Write()

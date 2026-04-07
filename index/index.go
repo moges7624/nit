@@ -45,9 +45,17 @@ func NewIndex(pathname string) *Index {
 	}
 }
 
-func (i *Index) Add(path, objHash string, stat os.FileInfo) {
+func (i *Index) Add(path, objHash string, stat os.FileInfo) error {
+	f, err := os.OpenFile(i.pathname, os.O_CREATE, 0o644)
+	if err != nil {
+		return fmt.Errorf("error creating index file: %s", err.Error())
+	}
+	f.Close()
+
 	entry := i.CreateEntry(path, objHash, stat)
 	i.Entries[path] = *entry
+
+	return nil
 }
 
 func (i *Index) CreateEntry(pathname, objHash string, stat os.FileInfo) *Entry {
@@ -136,6 +144,10 @@ func (i *Index) Write() error {
 func (i *Index) Load() error {
 	data, err := os.ReadFile(i.pathname)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
 		return err
 	}
 

@@ -50,7 +50,8 @@ func (i *Index) Add(path, objHash string, stat os.FileInfo) error {
 	if err != nil {
 		return fmt.Errorf("error creating index file: %s", err.Error())
 	}
-	f.Close()
+
+	defer f.Close()
 
 	entry := i.CreateEntry(path, objHash, stat)
 	i.Entries[path] = *entry
@@ -193,7 +194,8 @@ func (i *Index) Load() error {
 		e.GID = binary.BigEndian.Uint32(data[offset+32 : offset+36])
 		e.Size = binary.BigEndian.Uint32(data[offset+36 : offset+40])
 
-		copy([]byte(e.objHash), data[offset+40:offset+60])
+		e.objHash = fmt.Sprintf("%+x", (data[offset+40 : offset+60]))
+		// copy([]byte(e.objHash), data[offset+40:offset+60])
 		e.flags = binary.BigEndian.Uint16(data[offset+60 : offset+62])
 
 		offset += 62

@@ -21,9 +21,9 @@ type Index struct {
 type Stat struct{}
 
 type Entry struct {
-	objHash string
+	ObjHash string
 	flags   uint16
-	name    string
+	Name    string
 
 	CTimeSec  uint32
 	CTimeNSec uint32
@@ -61,8 +61,8 @@ func (i *Index) Add(path, objHash string, stat os.FileInfo) error {
 
 func (i *Index) CreateEntry(pathname, objHash string, stat os.FileInfo) *Entry {
 	e := &Entry{
-		name:    pathname,
-		objHash: objHash,
+		Name:    pathname,
+		ObjHash: objHash,
 		Mode:    0o100644,
 		flags:   uint16(len(pathname) & 0x0fff),
 		Size:    uint32(stat.Size()),
@@ -103,7 +103,7 @@ func (i *Index) Write() error {
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].name < entries[j].name
+		return entries[i].Name < entries[j].Name
 	})
 
 	var buf bytes.Buffer
@@ -123,11 +123,11 @@ func (i *Index) Write() error {
 		binary.Write(&buf, binary.BigEndian, e.UID)
 		binary.Write(&buf, binary.BigEndian, e.GID)
 		binary.Write(&buf, binary.BigEndian, e.Size)
-		hashStr, _ := hex.DecodeString(e.objHash)
+		hashStr, _ := hex.DecodeString(e.ObjHash)
 		buf.Write(hashStr)
 		binary.Write(&buf, binary.BigEndian, e.flags)
 
-		buf.WriteString(e.name)
+		buf.WriteString(e.Name)
 		buf.WriteByte(0)
 
 		pad := (8 - ((buf.Len() + 20) % 8)) % 8
@@ -194,7 +194,7 @@ func (i *Index) Load() error {
 		e.GID = binary.BigEndian.Uint32(data[offset+32 : offset+36])
 		e.Size = binary.BigEndian.Uint32(data[offset+36 : offset+40])
 
-		e.objHash = fmt.Sprintf("%+x", (data[offset+40 : offset+60]))
+		e.ObjHash = fmt.Sprintf("%+x", (data[offset+40 : offset+60]))
 		// copy([]byte(e.objHash), data[offset+40:offset+60])
 		e.flags = binary.BigEndian.Uint16(data[offset+60 : offset+62])
 
@@ -206,14 +206,14 @@ func (i *Index) Load() error {
 			return fmt.Errorf("malformed file name in index")
 		}
 
-		e.name = string(data[offset : offset+nameEnd])
+		e.Name = string(data[offset : offset+nameEnd])
 		offset += nameEnd + 1
 
 		// Skip padding to 8-byte boundary
 		pad := (8 - ((offset + 20) % 8)) % 8
 		offset += pad
 
-		i.Entries[e.name] = e
+		i.Entries[e.Name] = e
 	}
 
 	return nil

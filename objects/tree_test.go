@@ -2,6 +2,7 @@ package objects
 
 import (
 	"bytes"
+	"encoding/hex"
 	"testing"
 )
 
@@ -42,6 +43,38 @@ func TestTree_Serialize_Sorting(t *testing.T) {
 		if i > 0 && pos < bytes.Index(got, []byte(expectedOrder[i-1])) {
 			t.Errorf("Entries not sorted alphabetically by name")
 		}
+	}
+}
+
+func TestTree_Serialize_Format(t *testing.T) {
+	blobHashHex := "ce013625030ba8dba906f756967f9e9ca394464a"
+	blobHashBin, _ := hex.DecodeString(blobHashHex)
+
+	tree := Tree{
+		Entries: []Entry{
+			{
+				Name: "readme.md",
+				Hash: blobHashHex,
+				Mode: "100644",
+			},
+		},
+	}
+
+	serialized, err := tree.Serialize()
+	if err != nil {
+		t.Fatalf("Serliaze() error: %v", err)
+	}
+
+	expectedPrefix := []byte("100644 readme.md\x00")
+	if !bytes.HasPrefix(serialized, expectedPrefix) {
+		t.Errorf("Serliaze() prefix wrong. \nGot: %s\nWant: %s",
+			serialized[:len(expectedPrefix)], expectedPrefix)
+	}
+
+	hashPart := serialized[len(expectedPrefix):]
+	if len(hashPart) != 20 || !bytes.Equal(hashPart, blobHashBin) {
+		t.Errorf("Serialized hash bytes wrong.\nGot: %x\nWant: %x",
+			hashPart, blobHashBin)
 	}
 }
 

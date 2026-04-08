@@ -1,8 +1,49 @@
 package objects
 
 import (
+	"bytes"
 	"testing"
 )
+
+func TestTree_Serialize_Sorting(t *testing.T) {
+	tree := Tree{
+		Entries: []Entry{
+			{
+				Mode: "100644",
+				Name: "zfile.txt",
+				Hash: "0000000000000000000000000000000000000000",
+			},
+			{
+				Mode: "100644",
+				Name: "afile.txt",
+				Hash: "1111111111111111111111111111111111111111",
+			},
+			{
+				Mode: "040000",
+				Name: "subdir",
+				Hash: "2222222222222222222222222222222222222222",
+			},
+		},
+	}
+
+	got, err := tree.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize() error: %v", err)
+	}
+
+	expectedOrder := []string{"afile.txt", "subdir", "zfile.txt"}
+
+	for i, name := range expectedOrder {
+		if !bytes.Contains(got, []byte(name)) {
+			t.Errorf("Serialize() missing name %q", name)
+		}
+
+		pos := bytes.Index(got, []byte(name))
+		if i > 0 && pos < bytes.Index(got, []byte(expectedOrder[i-1])) {
+			t.Errorf("Entries not sorted alphabetically by name")
+		}
+	}
+}
 
 func TestTree_Hash(t *testing.T) {
 	t.Run("should produce valid tree for single blob", func(t *testing.T) {

@@ -1,38 +1,63 @@
 package objects
 
 import (
-	"bytes"
 	"testing"
 )
 
 func TestBlob_Hash(t *testing.T) {
-	t.Run("should produce valid hash", func(t *testing.T) {
-		buf := bytes.NewBuffer([]byte("hello\n"))
-		blob := NewBlob([]byte(buf.Bytes()))
+	tests := []struct {
+		name     string
+		data     []byte
+		expected string
+	}{
+		{
+			name:     "empty blob",
+			data:     []byte{},
+			expected: "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+		},
+		{
+			name:     "hello",
+			data:     []byte("hello\n"),
+			expected: "ce013625030ba8dba906f756967f9e9ca394464a",
+		},
+		{
+			name:     "mutltiline text",
+			data:     []byte("This is a long text of random characters.   2232  23222dfd sdfi I skdfjo j\nasdfdsfosdfdsfsdf\njdfsdjfkskd499494994 afsfd <<<<<<<<>>>> {{}\n{{\n|';[[[[\n"),
+			expected: "1741932947564dd278b7ebfe17fd79a4d708a49e",
+		},
+	}
 
-		expected := "ce013625030ba8dba906f756967f9e9ca394464a"
-		hash, err := blob.Hash()
-		if err != nil {
-			t.Errorf("error getting blob hash %s", err.Error())
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := NewBlob(tt.data)
 
-		if blob.hash != expected {
-			t.Errorf("Got %s, expected %s", hash, expected)
-		}
-	})
+			hash, err := b.Hash()
+			if err != nil {
+				t.Fatalf("Hash() error: %v", err)
+			}
 
-	t.Run("should produce valid hash long text", func(t *testing.T) {
-		data := "This is a long text of random characters.   2232  23222dfd sdfi I skdfjo j\nasdfdsfosdfdsfsdf\njdfsdjfkskd499494994 afsfd <<<<<<<<>>>> {{}\n{{\n|';[[[[\n"
+			if hash != tt.expected {
+				t.Errorf("Hash() = %s, want %s", hash, tt.expected)
+			}
+		})
+	}
+}
 
-		blob := NewBlob([]byte(data))
-		hash, err := blob.Hash()
-		if err != nil {
-			t.Errorf("error getting blob hash %s", err.Error())
-		}
-		expected := "1741932947564dd278b7ebfe17fd79a4d708a49e"
+func TestBlob_Hash_Caching(t *testing.T) {
+	b := NewBlob([]byte("hello"))
 
-		if blob.hash != expected {
-			t.Errorf("Got %s, expected %s", hash, expected)
-		}
-	})
+	hash1, err := b.Hash()
+	if err != nil {
+		t.Fatalf("Hash() error: %v", err)
+	}
+
+	b.Data = []byte("hello there")
+	hash2, err := b.Hash()
+	if err != nil {
+		t.Fatalf("Hash() error: %v", err)
+	}
+
+	if hash1 != hash2 {
+		t.Error("Hash changed after modification- caching is not working")
+	}
 }

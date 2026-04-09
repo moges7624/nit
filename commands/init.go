@@ -1,64 +1,33 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/moges7624/nit/repo"
 )
 
-func Init(args []string) {
-	rootPath, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Couldn't get root path")
-		os.Exit(1)
-	}
-
-	path := "."
-
+func Init(args []string) error {
+	dir := "."
 	if len(args) > 0 {
-		path = args[0]
+		dir = args[0]
 	}
 
-	nitPath := filepath.Join(rootPath, path, ".git")
-
-	// create .git directory
-	err = os.MkdirAll(nitPath, 0o755)
+	absPath, err := filepath.Abs(dir)
 	if err != nil {
-		var pathError *os.PathError
-		if errors.As(err, &pathError) {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", pathError.Path, pathError.Err)
-		}
-
-		return
+		return err
 	}
 
-	// create required subdirectories
-	dirs := []string{"objects", "refs/heads", "refs/tags"}
-	for _, dir := range dirs {
-		err = os.MkdirAll(filepath.Join(nitPath, dir), 0o755)
-		if err != nil {
-			fmt.Printf("Error creating %s: %v\n", dir, err)
-			os.Exit(1)
-		}
+	if err := os.MkdirAll(absPath, 0o755); err != nil {
+		return err
 	}
 
-	f, err := os.OpenFile(filepath.Join(nitPath, "refs/heads/main"),
-		os.O_CREATE,
-		0o644,
-	)
-	if err != nil {
-		fmt.Printf("Error creating main: %v\n", err)
-		return
-	}
-	defer f.Close()
-
-	// Write the initial HEAD file
-	err = os.WriteFile(filepath.Join(nitPath, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing HEAD: %v\n", err)
-		os.Exit(1)
+	repo := repo.NewRepository(absPath)
+	if err := repo.Init(); err != nil {
+		return err
 	}
 
-	fmt.Printf("Initialized empty nit repository in %s/\n", nitPath)
+	fmt.Printf("Initialized empty nit repository in %s/.git/\n", repo.WorkTreePath())
+	return nil
 }

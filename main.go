@@ -14,7 +14,9 @@ func main() {
 	switch cmd {
 
 	case "init":
-		commands.Init(args)
+		if err := commands.Init(args); err != nil {
+			fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
+		}
 
 	case "add":
 		commands.Add(args)

@@ -26,7 +26,7 @@ func (r Ref) UpdateHead(hashHex string) error {
 
 	f, err := os.OpenFile(
 		filepath.Join(r.nitDir, headPath),
-		os.O_WRONLY|os.O_TRUNC,
+		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
 		0o644,
 	)
 	if err != nil {
@@ -50,6 +50,9 @@ func (r *Ref) GetHeadCommit() (string, error) {
 
 	h, err := os.ReadFile(filepath.Join(r.nitDir, headPath))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return "", err
+		}
 		return "", fmt.Errorf("error getting head: %s", err.Error())
 	}
 

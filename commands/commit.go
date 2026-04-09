@@ -58,7 +58,7 @@ func Commit(args []string) {
 
 	ref := refs.NewRef(filepath.Join(wd, ".git/"))
 	par, err := ref.GetHeadCommit()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "%v", err.Error())
 		return
 	}

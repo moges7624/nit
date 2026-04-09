@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -51,6 +52,34 @@ func (r *Repository) Init() error {
 	}
 
 	return nil
+}
+
+// Open returns an existing repository
+// by searching upward from the given path
+func Open(startPath string) (*Repository, error) {
+	absPath, err := filepath.Abs(startPath)
+	if err != nil {
+		return nil, err
+	}
+
+	current := absPath
+	for {
+		nitPath := filepath.Join(current, ".git")
+		if fi, err := os.Stat(nitPath); err == nil && fi.IsDir() {
+			return &Repository{
+				workTreePath: current,
+				nitPath:      nitPath,
+			}, nil
+		}
+
+		parent := filepath.Dir(current)
+		if parent == current { // reached filesystem root
+			break
+		}
+		current = parent
+	}
+
+	return nil, errors.New("not a mygit repository (or any of the parent directories): .git")
 }
 
 func (r *Repository) ListFiles() ([]os.DirEntry, error) {

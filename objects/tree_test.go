@@ -3,7 +3,11 @@ package objects
 import (
 	"bytes"
 	"encoding/hex"
+	"os"
 	"testing"
+
+	"github.com/moges7624/nit/index"
+	"github.com/moges7624/nit/repo"
 )
 
 func TestTree_Serialize_Sorting(t *testing.T) {
@@ -159,4 +163,73 @@ func TestTree_Hash(t *testing.T) {
 			t.Errorf("Got %s, expected %s", hash, expected)
 		}
 	})
+}
+
+func TestTree_BuildFromIndex(t *testing.T) {
+	tests := []struct {
+		name     string
+		idx      index.Index
+		expected string
+	}{
+		{
+			name: "single entry in the index",
+			idx: index.Index{
+				Entries: map[string]index.Entry{
+					"file.txt": { // has conent => "new content"
+						Name:    "file.txt",
+						ObjHash: "b66ba06d315d46280bb09d54614cc52d1677809f",
+						Mode:    uint32(0o100644),
+					},
+				},
+			},
+			expected: "49215c458fc9c0cab17387fd7bf069464d34a861",
+		},
+		{
+			name: "nested directories",
+			idx: index.Index{
+				Entries: map[string]index.Entry{
+					"file.txt": { // has conent => "new content". without the quatations
+						Name:    "file.txt",
+						ObjHash: "b66ba06d315d46280bb09d54614cc52d1677809f",
+						Mode:    uint32(0o100644),
+					},
+					"internal/one.js": { // has empty content
+						Name:    "internal/one.js",
+						ObjHash: "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+						Mode:    uint32(0o100644),
+					},
+				},
+			},
+			expected: "3945d7ecd1b0534cb8760075cae3ea9a892a04c2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+
+			originalWd, err := os.Getwd()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err = os.Chdir(tempDir); err != nil {
+				t.Fatal(err)
+			}
+
+			t.Cleanup(func() {
+				_ = os.Chdir(originalWd)
+			})
+
+			repo := repo.NewRepository(tempDir)
+			hash, err := BuildFromIndex(repo, tt.idx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if hash != tt.expected {
+				t.Errorf("Incorrect tree generated\nExpected: %s\nGot: %s\n", tt.expected, hash)
+			}
+		})
+	}
 }

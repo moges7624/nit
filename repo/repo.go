@@ -23,7 +23,7 @@ func (r *Repository) WorkTreePath() string {
 	return r.workTreePath
 }
 
-func (r *Repository) NitDir() string {
+func (r *Repository) NitPath() string {
 	return r.nitPath
 }
 

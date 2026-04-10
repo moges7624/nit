@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/moges7624/nit/index"
 	"github.com/moges7624/nit/objects"
@@ -21,32 +20,26 @@ func Commit(args []string) {
 
 	message := args[1]
 
-	wd, err := os.Getwd()
+	repo, err := repo.Open(".")
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
 		return
 	}
 
-	repo := repo.NewRepository(wd)
-	index := index.NewIndex(filepath.Join(wd, ".git/index"))
+	index := index.NewIndex(filepath.Join(repo.NitPath(), "index"))
 	if err = index.Load(); err != nil {
 		fmt.Fprintf(os.Stderr, "error loading index: %s", err.Error())
 		return
 	}
 
-	tree := objects.Tree{}
-	for _, entry := range index.Entries {
-		treeEntry := objects.Entry{
-			Name: entry.Name,
-			Hash: entry.ObjHash,
-			Mode: objects.FileMode(strconv.FormatUint(uint64(entry.Mode), 8)),
-		}
-
-		tree.Entries = append(tree.Entries, treeEntry)
+	if len(index.Entries) == 0 {
+		fmt.Println("nothing to commit, working tree clean")
+		return
 	}
 
-	treeHash, err := objects.Store(repo, &tree)
+	treeHash, err := objects.BuildFromIndex(repo, *index)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error storing tree: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "error building tree from index: %s", err.Error())
 		return
 	}
 
@@ -56,7 +49,7 @@ func Commit(args []string) {
 		message,
 	)
 
-	ref := refs.NewRef(filepath.Join(wd, ".git/"))
+	ref := refs.NewRef(repo.NitPath())
 	par, err := ref.GetHeadCommit()
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "%v", err.Error())

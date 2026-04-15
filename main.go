@@ -22,7 +22,9 @@ func main() {
 		commands.Add(args)
 
 	case "commit":
-		commands.Commit(args)
+		if err := commands.Commit(args); err != nil {
+			fmt.Fprint(os.Stderr, err.Error())
+		}
 
 	default:
 		fmt.Printf("nit: '%s' is not a nit command.\n", cmd)

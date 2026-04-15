@@ -12,10 +12,9 @@ import (
 	"github.com/moges7624/nit/repo"
 )
 
-func Commit(args []string) {
+func Commit(args []string) error {
 	if len(args) < 1 || args[0] != "-m" || args[1] == "" {
-		fmt.Fprintf(os.Stderr, "Usage: nit commit -m <message>\n")
-		return
+		return fmt.Errorf("Usage: nit commit -m <message>\n")
 	}
 
 	message := args[1]
@@ -23,24 +22,22 @@ func Commit(args []string) {
 	repo, err := repo.Open(".")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err)
-		return
+		return fmt.Errorf("error opening repo: %s", err.Error())
 	}
 
 	index := index.NewIndex(filepath.Join(repo.NitPath(), "index"))
 	if err = index.Load(); err != nil {
-		fmt.Fprintf(os.Stderr, "error loading index: %s", err.Error())
-		return
+		return fmt.Errorf("error loading index: %s", err.Error())
 	}
 
 	if len(index.Entries) == 0 {
 		fmt.Println("nothing to commit, working tree clean")
-		return
+		return nil
 	}
 
 	treeHash, err := objects.BuildFromIndex(repo, *index)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error building tree from index: %s", err.Error())
-		return
+		return fmt.Errorf("error building tree from index: %s", err.Error())
 	}
 
 	commit := objects.NewCommit(
@@ -52,8 +49,7 @@ func Commit(args []string) {
 	ref := refs.NewRef(repo.NitPath())
 	par, err := ref.GetHeadCommit()
 	if err != nil && !os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "%v", err.Error())
-		return
+		return fmt.Errorf("error getting head commit: %s", err.Error())
 	}
 
 	if par != "" {
@@ -62,14 +58,12 @@ func Commit(args []string) {
 
 	commitHash, err := objects.Store(repo, commit)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error writing commit to a disk: %v", err.Error())
-		return
+		return fmt.Errorf("error writing commit to a disk: %v", err.Error())
 	}
 
 	err = ref.UpdateHead(commitHash)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error updating head: %v", err.Error())
-		return
+		return fmt.Errorf("error updating head: %v", err.Error())
 	}
 
 	var buf bytes.Buffer
@@ -82,4 +76,6 @@ func Commit(args []string) {
 	fmt.Fprintf(&buf, "%s] %s", commitHash[:7], message)
 
 	fmt.Println(buf.String())
+
+	return nil
 }

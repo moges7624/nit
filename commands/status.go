@@ -12,6 +12,9 @@ import (
 	"github.com/moges7624/nit/repo"
 )
 
+// TODO: if files in a given directory are not tracked, the directory
+// should be listed as untracked rather than listing each files in
+// the directory as untracked
 func Status() (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {

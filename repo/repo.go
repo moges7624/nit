@@ -106,3 +106,18 @@ func (r *Repository) ListFiles() ([]os.DirEntry, error) {
 
 	return validFiles, nil
 }
+
+func (r *Repository) ObjectsDir() string {
+	return filepath.Join(r.nitPath, "objects")
+}
+
+func (r *Repository) LooseObjectPath(hash string) string {
+	if len(hash) != 40 {
+		return ""
+	}
+
+	dir := hash[:2]
+	filename := hash[2:]
+
+	return filepath.Join(r.ObjectsDir(), dir, filename)
+}

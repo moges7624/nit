@@ -26,6 +26,14 @@ func main() {
 			fmt.Fprint(os.Stderr, err.Error())
 		}
 
+	case "status":
+		res, err := commands.Status()
+		if err != nil {
+			fmt.Fprint(os.Stderr, err.Error())
+		}
+
+		fmt.Print(res)
+
 	default:
 		fmt.Printf("nit: '%s' is not a nit command.\n", cmd)
 	}

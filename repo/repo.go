@@ -79,7 +79,7 @@ func Open(startPath string) (*Repository, error) {
 		current = parent
 	}
 
-	return nil, errors.New("not a mygit repository (or any of the parent directories): .git")
+	return nil, errors.New("not a nit repository (or any of the parent directories): .git")
 }
 
 func (r *Repository) ListFiles() ([]os.DirEntry, error) {

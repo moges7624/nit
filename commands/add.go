@@ -62,5 +62,8 @@ func Add(args []string) {
 		}
 	}
 
-	index.Write()
+	if err = index.Write(); err == nil {
+		// fmt.Printf("%+v\n", index.Entries)
+		fmt.Println("Wrote the index to disk")
+	}
 }

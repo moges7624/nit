@@ -56,7 +56,7 @@ func (r *Ref) GetHeadCommit() (string, error) {
 		return "", fmt.Errorf("error getting head: %s", err.Error())
 	}
 
-	return string(h), err
+	return strings.TrimSpace(string(h)), err
 }
 
 func (r *Ref) GetHeadPath() (string, error) {

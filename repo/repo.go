@@ -121,3 +121,37 @@ func (r *Repository) LooseObjectPath(hash string) string {
 
 	return filepath.Join(r.ObjectsDir(), dir, filename)
 }
+
+// func (r *Repository) GetHeadTree() (*objects.Tree, error) {
+// 	ref := refs.NewRef(r.nitPath)
+//
+// 	headCommitHash, err := ref.GetHeadCommit()
+// 	if err != nil {
+// 		if os.IsNotExist(err) {
+// 			fmt.Println("head does not exist")
+// 		}
+// 		return nil, fmt.Errorf("error getting head commit hash: %w", err)
+// 	}
+//
+// 	headCommitObj, err := objects.Read(r, headCommitHash)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error getting head commit obj: %w", err)
+// 	}
+//
+// 	headCommit, ok := headCommitObj.(*objects.Commit)
+// 	if !ok {
+// 		return nil, fmt.Errorf("invalid head commit object: %w", err)
+// 	}
+//
+// 	headTreeObj, err := objects.Read(r, headCommit.Tree)
+// 	if !ok {
+// 		return nil, fmt.Errorf("error getting head tree obj: %w", err)
+// 	}
+//
+// 	headTree, ok := headTreeObj.(*objects.Tree)
+// 	if !ok {
+// 		return nil, fmt.Errorf("invalid head tree obj: %w", err)
+// 	}
+//
+// 	return headTree, nil
+// }

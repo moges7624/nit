@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/moges7624/nit/index"
@@ -19,9 +21,6 @@ type FileStatus struct {
 	status string
 }
 
-// TODO: if files in a given directory are not tracked, the directory
-// should be listed as untracked rather than listing each files in
-// the directory as untracked
 func Status() (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -37,19 +36,47 @@ func Status() (string, error) {
 
 	var res bytes.Buffer
 
-	var stagedChanges []FileStatus
 	headTreeHash, err := getHeadTreeHash(repo)
 	if err != nil {
 		return "", fmt.Errorf("error getting head tree hash: %w", err)
-	} else {
-		stagedChanges = findStagedChanges(repo, index, headTreeHash)
 	}
 
-	for _, entry := range stagedChanges {
-		if entry.status == "new" {
-			fmt.Fprintf(&res, "A %s\n", entry.name)
-		} else if entry.status == "modified" {
-			fmt.Fprintf(&res, "AM %s\n", entry.name)
+	stagedChanges := findStagedChanges(repo, index, headTreeHash)
+
+	modifiedChanges := findModifiedFiles(repo, index)
+	for file, status := range modifiedChanges {
+		if _, exists := stagedChanges[file]; exists {
+			stagedChanges[file] = stagedChanges[file] + status
+		} else {
+			switch status {
+			case "M":
+				stagedChanges[file] = "unstagedM"
+			case "D":
+				stagedChanges[file] = "unstagedD"
+			}
+		}
+	}
+
+	alteredFiles := slices.Collect(maps.Keys(stagedChanges))
+
+	slices.Sort(alteredFiles)
+
+	for _, file := range alteredFiles {
+		switch stagedChanges[file] {
+		case "A":
+			fmt.Fprintf(&res, "A  %s\n", file)
+		case "M":
+			fmt.Fprintf(&res, "M  %s\n", file)
+		case "AM":
+			fmt.Fprintf(&res, "AM %s\n", file)
+		case "MM":
+			fmt.Fprintf(&res, "MM %s\n", file)
+		case "D":
+			fmt.Fprintf(&res, "D %s\n", file)
+		case "unstagedM":
+			fmt.Fprintf(&res, " M %s\n", file)
+		case "unstagedD":
+			fmt.Fprintf(&res, " D %s\n", file)
 		}
 	}
 
@@ -68,16 +95,13 @@ func Status() (string, error) {
 func findStagedChanges(repo *repo.Repository,
 	idx *index.Index,
 	headTreeHash string,
-) []FileStatus {
-	var changes []FileStatus
+) map[string]string {
+	changes := make(map[string]string)
 
 	// no commit on the repo yet
 	if headTreeHash == "" {
 		for _, entry := range idx.Entries {
-			changes = append(changes, FileStatus{
-				name:   entry.Name,
-				status: "new",
-			})
+			changes[entry.Name] = "A"
 		}
 
 		return changes
@@ -86,10 +110,7 @@ func findStagedChanges(repo *repo.Repository,
 	headTreeObj, err := objects.Read(repo, headTreeHash)
 	if err != nil {
 		for _, entry := range idx.Entries {
-			changes = append(changes, FileStatus{
-				name:   entry.Name,
-				status: "new",
-			})
+			changes[entry.Name] = "A"
 		}
 
 		return changes
@@ -113,24 +134,15 @@ func findStagedChanges(repo *repo.Repository,
 	for path, idxHash := range indexFiles {
 		headHash, exists := headFiles[path]
 		if !exists {
-			changes = append(changes, FileStatus{
-				name:   path,
-				status: "new",
-			})
+			changes[path] = "A"
 		} else if idxHash != headHash {
-			changes = append(changes, FileStatus{
-				name:   path,
-				status: "modified",
-			})
+			changes[path] = "M"
 		}
 	}
 
 	for path := range headFiles {
 		if _, exists := indexFiles[path]; !exists {
-			changes = append(changes, FileStatus{
-				name:   path,
-				status: "deleted",
-			})
+			changes[path] = "D"
 		}
 	}
 
@@ -149,12 +161,16 @@ func findUntrackedFiles(repo *repo.Repository, idx *index.Index) ([]string, erro
 			return filepath.SkipDir
 		}
 
-		if info.IsDir() {
-			return nil
-		}
-
 		relPath, _ := filepath.Rel(repo.NitPath(), path)
 		cleanRelPath := strings.TrimPrefix(relPath, "../")
+
+		if info.IsDir() {
+			if !hasStagedFile(idx, cleanRelPath) && cleanRelPath != ".." {
+				untracked = append(untracked, cleanRelPath+"/")
+				return filepath.SkipDir
+			}
+			return nil
+		}
 
 		if _, exists := idx.Entries[cleanRelPath]; exists {
 			return nil
@@ -170,6 +186,31 @@ func findUntrackedFiles(repo *repo.Repository, idx *index.Index) ([]string, erro
 	return untracked, nil
 }
 
+func findModifiedFiles(repo *repo.Repository, idx *index.Index) map[string]string {
+	modified := make(map[string]string)
+
+	for _, entry := range idx.Entries {
+		fullpath := filepath.Join(repo.WorkTreePath(), entry.Name)
+
+		fi, err := os.Stat(fullpath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				modified[entry.Name] = "D"
+			}
+			continue
+		}
+
+		if uint32(fi.Size()) != entry.Size ||
+			uint32(fi.ModTime().Unix()) != entry.MTimeSec {
+			// modified = append(modified, entry.Name)
+			modified[entry.Name] = "M"
+			continue
+		}
+	}
+
+	return modified
+}
+
 func flattenTree(repo *repo.Repository,
 	tree *objects.Tree,
 	prefix string,
@@ -181,7 +222,7 @@ func flattenTree(repo *repo.Repository,
 			fullPath = prefix + "/" + entry.Name
 		}
 
-		if entry.Mode == "040000" {
+		if entry.Mode == "40000" {
 			subTreeObj, err := objects.Read(repo, entry.Hash)
 			if err != nil {
 				continue
@@ -229,4 +270,13 @@ func getHeadTreeHash(repo *repo.Repository) (string, error) {
 	headTreeHash, _ := headTree.Hash()
 
 	return headTreeHash, nil
+}
+
+func hasStagedFile(idx *index.Index, dir string) bool {
+	for name := range idx.Entries {
+		if strings.HasPrefix(name, dir) {
+			return true
+		}
+	}
+	return false
 }

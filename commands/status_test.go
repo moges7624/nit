@@ -75,7 +75,7 @@ func TestStatus_UntrackedFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected := "A file.txt\nA test.txt\n"
+		expected := "AM file.txt\nA  test.txt\n"
 		if res != expected {
 			t.Errorf("expected: \n%s got: \n%s", expected, res)
 		}
@@ -103,7 +103,7 @@ func TestStatus_UntrackedFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected := "A internal/test.txt\n?? file.txt\n"
+		expected := "A  internal/test.txt\n?? file.txt\n"
 		if res != expected {
 			t.Errorf("expected: \n%s got: \n%s", expected, res)
 		}

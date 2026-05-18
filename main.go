@@ -27,7 +27,7 @@ func main() {
 		}
 
 	case "status":
-		res, err := commands.Status()
+		res, err := commands.Status(args)
 		if err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
 		}

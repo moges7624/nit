@@ -21,7 +21,7 @@ type FileStatus struct {
 	status string
 }
 
-func Status() (string, error) {
+func Status(args []string) (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("error getting working directory: %w", err)
@@ -34,62 +34,27 @@ func Status() (string, error) {
 		return "", fmt.Errorf("error loading index: %w", err)
 	}
 
-	var res bytes.Buffer
-
 	headTreeHash, err := getHeadTreeHash(repo)
 	if err != nil {
 		return "", fmt.Errorf("error getting head tree hash: %w", err)
 	}
 
 	stagedChanges := findStagedChanges(repo, index, headTreeHash)
-
 	modifiedChanges := findModifiedFiles(repo, index)
-	for file, status := range modifiedChanges {
-		if _, exists := stagedChanges[file]; exists {
-			stagedChanges[file] = stagedChanges[file] + status
-		} else {
-			switch status {
-			case "M":
-				stagedChanges[file] = "unstagedM"
-			case "D":
-				stagedChanges[file] = "unstagedD"
-			}
-		}
-	}
-
-	alteredFiles := slices.Collect(maps.Keys(stagedChanges))
-
-	slices.Sort(alteredFiles)
-
-	for _, file := range alteredFiles {
-		switch stagedChanges[file] {
-		case "A":
-			fmt.Fprintf(&res, "A  %s\n", file)
-		case "M":
-			fmt.Fprintf(&res, "M  %s\n", file)
-		case "AM":
-			fmt.Fprintf(&res, "AM %s\n", file)
-		case "MM":
-			fmt.Fprintf(&res, "MM %s\n", file)
-		case "D":
-			fmt.Fprintf(&res, "D %s\n", file)
-		case "unstagedM":
-			fmt.Fprintf(&res, " M %s\n", file)
-		case "unstagedD":
-			fmt.Fprintf(&res, " D %s\n", file)
-		}
-	}
 
 	untrackedFiles, err := findUntrackedFiles(repo, index)
 	if err != nil {
 		return "", err
 	}
 
-	for _, file := range untrackedFiles {
-		fmt.Fprintf(&res, "?? %s\n", file)
+	var resp string
+	if len(args) > 0 && args[0] == "--porcelain" {
+		resp = formatStatusPorcelain(untrackedFiles, stagedChanges, modifiedChanges)
+	} else {
+		resp = formatStatus(untrackedFiles, stagedChanges, modifiedChanges)
 	}
 
-	return res.String(), nil
+	return resp, nil
 }
 
 func findStagedChanges(repo *repo.Repository,
@@ -279,4 +244,97 @@ func hasStagedFile(idx *index.Index, dir string) bool {
 		}
 	}
 	return false
+}
+
+func formatStatus(untrackedChanges []string,
+	stagedChanges, modifiedIndex map[string]string,
+) string {
+	var res bytes.Buffer
+
+	statusMap := map[string]string{
+		"M": "modified",
+		"A": "new file",
+		"D": "deleted",
+	}
+
+	fmt.Fprintln(&res, "On branch main")
+	fmt.Fprintln(&res, "Changes to be committed:")
+
+	stagedChangesSlc := slices.Collect(maps.Keys(stagedChanges))
+	slices.Sort(stagedChangesSlc)
+
+	for _, file := range stagedChangesSlc {
+		fmt.Fprintf(&res, "\t%s:   %s\n", statusMap[stagedChanges[file]], file)
+	}
+
+	fmt.Fprintln(&res, "\nChanges not staged for commit:")
+	fmt.Fprintln(&res, `  (use "nit add <file>..." to update what will be committed)`)
+
+	modifiedIndexSlc := slices.Collect(maps.Keys(modifiedIndex))
+	slices.Sort(modifiedIndexSlc)
+
+	for _, file := range modifiedIndexSlc {
+		fmt.Fprintf(&res, "\t%s:   %s\n", statusMap[modifiedIndex[file]], file)
+	}
+
+	fmt.Fprintln(&res, "\nUntracked files:")
+	fmt.Fprintln(&res, `  (use "nit add <file>..." to include in what will be committed)`)
+	for _, file := range untrackedChanges {
+		fmt.Fprintf(&res, "\t%s\n", file)
+	}
+
+	return res.String()
+}
+
+func formatStatusPorcelain(
+	untrackedChanges []string,
+	stagedChanges,
+	modifiedIndex map[string]string,
+) string {
+	trackedChanges := make(map[string]string)
+
+	maps.Copy(trackedChanges, stagedChanges)
+
+	for file, status := range modifiedIndex {
+		if _, exists := trackedChanges[file]; exists {
+			trackedChanges[file] = trackedChanges[file] + status
+		} else {
+			switch status {
+			case "M":
+				trackedChanges[file] = "unstagedM"
+			case "D":
+				trackedChanges[file] = "unstagedD"
+			}
+		}
+	}
+
+	var res bytes.Buffer
+	alteredFiles := slices.Collect(maps.Keys(trackedChanges))
+
+	slices.Sort(alteredFiles)
+
+	for _, file := range alteredFiles {
+		switch trackedChanges[file] {
+		case "A":
+			fmt.Fprintf(&res, "A  %s\n", file)
+		case "M":
+			fmt.Fprintf(&res, "M  %s\n", file)
+		case "AM":
+			fmt.Fprintf(&res, "AM %s\n", file)
+		case "MM":
+			fmt.Fprintf(&res, "MM %s\n", file)
+		case "D":
+			fmt.Fprintf(&res, "D %s\n", file)
+		case "unstagedM":
+			fmt.Fprintf(&res, " M %s\n", file)
+		case "unstagedD":
+			fmt.Fprintf(&res, " D %s\n", file)
+		}
+	}
+
+	for _, file := range untrackedChanges {
+		fmt.Fprintf(&res, "?? %s\n", file)
+	}
+
+	return res.String()
 }

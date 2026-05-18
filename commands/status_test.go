@@ -40,7 +40,7 @@ func TestStatus_UntrackedFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		res, err := Status()
+		res, err := Status([]string{"--porcelain"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -70,7 +70,7 @@ func TestStatus_UntrackedFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		res, err := Status()
+		res, err := Status([]string{"--porcelain"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -98,7 +98,7 @@ func TestStatus_UntrackedFiles(t *testing.T) {
 		}
 
 		Add([]string{"internal/test.txt"})
-		res, err := Status()
+		res, err := Status([]string{"--porcelain"})
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -30,9 +30,28 @@ func Commit(args []string) error {
 		return fmt.Errorf("error loading index: %s", err.Error())
 	}
 
+	hth, _ := getHeadTreeHash(repo)
 	if len(index.Entries) == 0 {
 		fmt.Println("nothing to commit, working tree clean")
 		return nil
+	}
+
+	repoStatus, _ := Status([]string{})
+	stagedChanges := findStagedChanges(repo, index, hth)
+	untrackedFiles, _ := findUntrackedFiles(repo, index)
+	modifiedIndexFiles := findModifiedFiles(repo, index)
+
+	if len(stagedChanges) == 0 {
+		if len(modifiedIndexFiles) > 0 {
+			fmt.Println(repoStatus)
+			fmt.Println(`no changes added to commit (use "nit add")`)
+			return nil
+		}
+		if len(untrackedFiles) > 0 {
+			fmt.Println(repoStatus)
+			fmt.Println(`nothing added to commit but untracked files present (use "nit add" to track)`)
+			return nil
+		}
 	}
 
 	treeHash, err := objects.BuildFromIndex(repo, *index)

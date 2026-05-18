@@ -275,7 +275,7 @@ func formatStatus(untrackedChanges []string,
 	slices.Sort(stagedChangesSlc)
 
 	for _, file := range stagedChangesSlc {
-		fmt.Fprintf(&res, "\t%s:   %s\n", statusMap[stagedChanges[file]], file)
+		fmt.Fprintf(&res, "\t\033[32m%s:   %s\033[0m\n", statusMap[stagedChanges[file]], file)
 	}
 
 	if len(modifiedIndex) > 0 {
@@ -287,7 +287,7 @@ func formatStatus(untrackedChanges []string,
 	slices.Sort(modifiedIndexSlc)
 
 	for _, file := range modifiedIndexSlc {
-		fmt.Fprintf(&res, "\t%s:   %s\n", statusMap[modifiedIndex[file]], file)
+		fmt.Fprintf(&res, "\t\033[31m%s:   %s\033[0m\n", statusMap[modifiedIndex[file]], file)
 	}
 
 	if len(untrackedChanges) > 0 {
@@ -296,7 +296,7 @@ func formatStatus(untrackedChanges []string,
 	}
 
 	for _, file := range untrackedChanges {
-		fmt.Fprintf(&res, "\t%s\n", file)
+		fmt.Fprintf(&res, "\t\033[31m%s\033[0m\n", file)
 	}
 
 	return res.String()

@@ -258,7 +258,18 @@ func formatStatus(untrackedChanges []string,
 	}
 
 	fmt.Fprintln(&res, "On branch main")
-	fmt.Fprintln(&res, "Changes to be committed:")
+
+	if len(stagedChanges) == 0 &&
+		len(untrackedChanges) == 0 &&
+		len(modifiedIndex) == 0 {
+		fmt.Fprintln(&res, "nothing to commit, working tree clean")
+
+		return res.String()
+	}
+
+	if len(stagedChanges) > 0 {
+		fmt.Fprintln(&res, "Changes to be committed:")
+	}
 
 	stagedChangesSlc := slices.Collect(maps.Keys(stagedChanges))
 	slices.Sort(stagedChangesSlc)
@@ -267,8 +278,10 @@ func formatStatus(untrackedChanges []string,
 		fmt.Fprintf(&res, "\t%s:   %s\n", statusMap[stagedChanges[file]], file)
 	}
 
-	fmt.Fprintln(&res, "\nChanges not staged for commit:")
-	fmt.Fprintln(&res, `  (use "nit add <file>..." to update what will be committed)`)
+	if len(modifiedIndex) > 0 {
+		fmt.Fprintln(&res, "\nChanges not staged for commit:")
+		fmt.Fprintln(&res, `  (use "nit add <file>..." to update what will be committed)`)
+	}
 
 	modifiedIndexSlc := slices.Collect(maps.Keys(modifiedIndex))
 	slices.Sort(modifiedIndexSlc)
@@ -277,8 +290,11 @@ func formatStatus(untrackedChanges []string,
 		fmt.Fprintf(&res, "\t%s:   %s\n", statusMap[modifiedIndex[file]], file)
 	}
 
-	fmt.Fprintln(&res, "\nUntracked files:")
-	fmt.Fprintln(&res, `  (use "nit add <file>..." to include in what will be committed)`)
+	if len(untrackedChanges) > 0 {
+		fmt.Fprintln(&res, "\nUntracked files:")
+		fmt.Fprintln(&res, `  (use "nit add <file>..." to include in what will be committed)`)
+	}
+
 	for _, file := range untrackedChanges {
 		fmt.Fprintf(&res, "\t%s\n", file)
 	}

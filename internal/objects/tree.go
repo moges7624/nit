@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/moges7624/nit/index"
-	"github.com/moges7624/nit/repo"
+	"github.com/moges7624/nit/internal/index"
+	"github.com/moges7624/nit/internal/repo"
 )
 
 type FileMode string

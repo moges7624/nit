@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/moges7624/nit/index"
-	"github.com/moges7624/nit/objects"
-	"github.com/moges7624/nit/refs"
-	"github.com/moges7624/nit/repo"
+	"github.com/moges7624/nit/internal/index"
+	"github.com/moges7624/nit/internal/objects"
+	"github.com/moges7624/nit/internal/refs"
+	"github.com/moges7624/nit/internal/repo"
 )
 
 func Commit(args []string) error {

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/moges7624/nit/repo"
+	"github.com/moges7624/nit/internal/repo"
 )
 
 func Init(args []string) error {

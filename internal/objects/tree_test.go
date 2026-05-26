@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/moges7624/nit/index"
-	"github.com/moges7624/nit/repo"
+	"github.com/moges7624/nit/internal/index"
+	"github.com/moges7624/nit/internal/repo"
 )
 
 func TestTree_Serialize_Sorting(t *testing.T) {

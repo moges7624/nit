@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/moges7624/nit/repo"
+	"github.com/moges7624/nit/internal/repo"
 )
 
 type Object interface {

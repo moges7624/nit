@@ -10,6 +10,7 @@ import (
 	"github.com/moges7624/nit/internal/objects"
 	"github.com/moges7624/nit/internal/refs"
 	"github.com/moges7624/nit/internal/repo"
+	"github.com/moges7624/nit/internal/status"
 )
 
 func Commit(args []string) error {
@@ -30,25 +31,16 @@ func Commit(args []string) error {
 		return fmt.Errorf("error loading index: %s", err.Error())
 	}
 
-	hth, _ := getHeadTreeHash(repo)
-	if len(index.Entries) == 0 {
-		fmt.Println("nothing to commit, working tree clean")
-		return nil
-	}
+	status, _ := status.GetStatus(repo, index)
 
-	repoStatus, _ := Status([]string{})
-	stagedChanges := findStagedChanges(repo, index, hth)
-	untrackedFiles, _ := findUntrackedFiles(repo, index)
-	modifiedIndexFiles := findModifiedFiles(repo, index)
-
-	if len(stagedChanges) == 0 {
-		if len(modifiedIndexFiles) > 0 {
-			fmt.Println(repoStatus)
+	if len(status.Staged) == 0 {
+		if len(status.Modified) > 0 {
+			fmt.Println(status.FormatStatus())
 			fmt.Println(`no changes added to commit (use "nit add")`)
 			return nil
 		}
-		if len(untrackedFiles) > 0 {
-			fmt.Println(repoStatus)
+		if len(status.Untracked) > 0 {
+			fmt.Println(status.FormatStatus())
 			fmt.Println(`nothing added to commit but untracked files present (use "nit add" to track)`)
 			return nil
 		}

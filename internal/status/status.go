@@ -14,12 +14,21 @@ import (
 	"github.com/moges7624/nit/internal/objects"
 	"github.com/moges7624/nit/internal/refs"
 	"github.com/moges7624/nit/internal/repo"
+	myers "github.com/moges7624/nit/lib/diff"
 )
 
 type Status struct {
+	repo      repo.Repository
 	Staged    map[string]string
 	Modified  map[string]string
 	Untracked []string
+	headFiles map[string]string
+}
+
+type Stat struct {
+	FilesChanged int
+	Insertions   int
+	Deletions    int
 }
 
 type FileStatus struct {
@@ -28,12 +37,8 @@ type FileStatus struct {
 }
 
 func GetStatus(repo *repo.Repository, index *index.Index) (*Status, error) {
-	headTreeHash, err := getHeadTreeHash(repo)
-	if err != nil {
-		return nil, fmt.Errorf("error getting head tree hash: %w", err)
-	}
-
-	stagedChanges := findStagedChanges(repo, index, headTreeHash)
+	status := &Status{repo: *repo}
+	stagedChanges := status.findStagedChanges(repo, index)
 	modifiedChanges := findModifiedFiles(repo, index)
 
 	untrackedFiles, err := findUntrackedFiles(repo, index)
@@ -41,48 +46,27 @@ func GetStatus(repo *repo.Repository, index *index.Index) (*Status, error) {
 		return nil, err
 	}
 
-	status := &Status{
-		Staged:    stagedChanges,
-		Modified:  modifiedChanges,
-		Untracked: untrackedFiles,
-	}
+	status.Staged = stagedChanges
+	status.Modified = modifiedChanges
+	status.Untracked = untrackedFiles
+
 	return status, nil
 }
 
-func findStagedChanges(repo *repo.Repository,
+func (s *Status) findStagedChanges(
+	repo *repo.Repository,
 	idx *index.Index,
-	headTreeHash string,
 ) map[string]string {
 	changes := make(map[string]string)
 
-	// no commit on the repo yet
-	if headTreeHash == "" {
+	headFiles, err := s.getHeadFiles(repo)
+	if err != nil || headFiles == nil {
 		for _, entry := range idx.Entries {
 			changes[entry.Name] = "A"
 		}
-
 		return changes
 	}
 
-	headTreeObj, err := objects.Read(repo, headTreeHash)
-	if err != nil {
-		for _, entry := range idx.Entries {
-			changes[entry.Name] = "A"
-		}
-
-		return changes
-	}
-
-	headTree, ok := headTreeObj.(*objects.Tree)
-	if !ok {
-		return changes
-	}
-
-	// convert head tree into flat map: path -> blob hash
-	headFiles := make(map[string]string)
-	flattenTree(repo, headTree, "", headFiles)
-
-	// build index map
 	indexFiles := make(map[string]string)
 	for _, entry := range idx.Entries {
 		indexFiles[entry.Name] = entry.ObjHash
@@ -339,4 +323,73 @@ func (s Status) FormatStatusPorcelain() string {
 	}
 
 	return res.String()
+}
+
+func (s *Status) getHeadFiles(repo *repo.Repository) (map[string]string, error) {
+	if s.headFiles != nil {
+		return s.headFiles, nil
+	}
+
+	headTreeHash, err := getHeadTreeHash(repo)
+	if err != nil {
+		return nil, fmt.Errorf("error getting head tree hash: %w", err)
+	}
+
+	if headTreeHash == "" {
+		return nil, nil
+	}
+
+	headTreeObj, err := objects.Read(repo, headTreeHash)
+	if err != nil {
+		return nil, err
+	}
+
+	headTree, ok := headTreeObj.(*objects.Tree)
+	if !ok {
+		return nil, fmt.Errorf("invalid head tree object")
+	}
+
+	headFiles := make(map[string]string)
+	flattenTree(repo, headTree, "", headFiles)
+
+	s.headFiles = headFiles
+
+	return headFiles, nil
+}
+
+func (s *Status) Stat() *Stat {
+	var ins int
+	var del int
+	headFiles, _ := s.getHeadFiles(&s.repo)
+
+	for k := range s.Staged {
+		blobObj, _ := objects.Read(&s.repo, headFiles[k])
+		blob, _ := blobObj.(*objects.Blob)
+		arr := strings.Split(strings.TrimSpace(string(blob.Data)), "\n")
+
+		if s.Staged[k] == "D" {
+			del += len(arr)
+			continue
+		}
+
+		filePath := filepath.Join(s.repo.WorkTreePath(), k)
+		cnt, _ := os.ReadFile(filePath)
+
+		cntArr := strings.Split(strings.TrimSpace(string(cnt)), "\n")
+
+		script := myers.Diff(arr, cntArr)
+		for _, k := range script {
+			if k.Type == 1 {
+				del++
+			}
+			if k.Type == 2 {
+				ins++
+			}
+		}
+	}
+	return &Stat{
+		FilesChanged: len(s.Staged),
+		Deletions:    del,
+		Insertions:   ins,
+	}
 }

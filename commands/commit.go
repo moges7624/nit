@@ -84,7 +84,32 @@ func Commit(args []string) error {
 		fmt.Fprintf(&buf, "(root-commit) ")
 	}
 
-	fmt.Fprintf(&buf, "%s] %s", commitHash[:7], message)
+	stat := status.Stat()
+
+	fileTxt := "file"
+	if len(status.Staged) > 1 {
+		fileTxt = "files"
+	}
+
+	deletionTxt := "deletion"
+	if stat.Deletions > 1 {
+		deletionTxt = "deletions"
+	}
+
+	insertionTxt := "insertion"
+	if stat.Insertions > 1 {
+		deletionTxt = "insertions"
+	}
+	fmt.Fprintf(&buf, "%s] %s\n", commitHash[:7], message)
+	fmt.Fprintf(&buf, " %d %s changed", stat.FilesChanged, fileTxt)
+
+	if stat.Insertions > 0 {
+		fmt.Fprintf(&buf, ", %d %s(+)", stat.Insertions, insertionTxt)
+	}
+
+	if stat.Deletions > 0 {
+		fmt.Fprintf(&buf, ", %d %s(+)", stat.Deletions, deletionTxt)
+	}
 
 	fmt.Println(buf.String())
 

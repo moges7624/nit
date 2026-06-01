@@ -14,7 +14,7 @@ import (
 	"github.com/moges7624/nit/internal/objects"
 	"github.com/moges7624/nit/internal/refs"
 	"github.com/moges7624/nit/internal/repo"
-	myers "github.com/moges7624/nit/lib/diff"
+	"github.com/moges7624/nit/lib/diff"
 )
 
 type Status struct {
@@ -377,7 +377,7 @@ func (s *Status) Stat() *Stat {
 
 		cntArr := strings.Split(strings.TrimSpace(string(cnt)), "\n")
 
-		script := myers.Diff(arr, cntArr)
+		script := diff.MyersDiff(arr, cntArr)
 		for _, k := range script {
 			if k.Type == 1 {
 				del++

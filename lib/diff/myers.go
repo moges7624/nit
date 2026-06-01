@@ -1,4 +1,4 @@
-package myers
+package diff
 
 type OpType int
 
@@ -13,7 +13,7 @@ type Operation struct {
 	Line string
 }
 
-func Diff(a, b []string) []Operation {
+func MyersDiff(a, b []string) []Operation {
 	N := len(a)
 	M := len(b)
 	MAX := N + M

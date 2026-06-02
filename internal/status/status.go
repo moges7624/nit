@@ -363,9 +363,16 @@ func (s *Status) Stat() *Stat {
 	headFiles, _ := s.getHeadFiles(&s.repo)
 
 	for k := range s.Staged {
-		blobObj, _ := objects.Read(&s.repo, headFiles[k])
-		blob, _ := blobObj.(*objects.Blob)
-		arr := strings.Split(strings.TrimSpace(string(blob.Data)), "\n")
+		var arr []string
+
+		if s.Staged[k] == "A" {
+			arr = []string{}
+		} else {
+			blobObj, _ := objects.Read(&s.repo, headFiles[k])
+			fmt.Println("blob Obj: ", blobObj)
+			blob, _ := blobObj.(*objects.Blob)
+			arr = strings.Split(strings.TrimSpace(string(blob.Data)), "\n")
+		}
 
 		if s.Staged[k] == "D" {
 			del += len(arr)
@@ -375,18 +382,19 @@ func (s *Status) Stat() *Stat {
 		filePath := filepath.Join(s.repo.WorkTreePath(), k)
 		cnt, _ := os.ReadFile(filePath)
 
-		cntArr := strings.Split(strings.TrimSpace(string(cnt)), "\n")
-
-		script := diff.MyersDiff(arr, cntArr)
-		for _, k := range script {
-			if k.Type == 1 {
-				del++
-			}
-			if k.Type == 2 {
-				ins++
-			}
+		var currContentArr []string
+		curContent := strings.TrimSpace(string(cnt))
+		if curContent == "" {
+			currContentArr = []string{}
+		} else {
+			currContentArr = strings.Split(curContent, "\n")
 		}
+
+		diffStat := diff.Stat(arr, currContentArr)
+		del += diffStat.Deletion
+		ins += diffStat.Insertion
 	}
+
 	return &Stat{
 		FilesChanged: len(s.Staged),
 		Deletions:    del,

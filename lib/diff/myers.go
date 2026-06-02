@@ -13,7 +13,7 @@ type Operation struct {
 	Line string
 }
 
-func MyersDiff(a, b []string) []Operation {
+func myersDiff(a, b []string) []Operation {
 	N := len(a)
 	M := len(b)
 	MAX := N + M

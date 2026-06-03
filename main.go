@@ -34,6 +34,14 @@ func main() {
 
 		fmt.Print(res)
 
+	case "diff":
+		res, err := commands.Diff(args)
+		if err != nil {
+			fmt.Fprint(os.Stderr, err.Error())
+		}
+
+		fmt.Print(res)
+
 	default:
 		fmt.Printf("nit: '%s' is not a nit command.\n", cmd)
 	}

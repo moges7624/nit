@@ -168,7 +168,7 @@ func parseCommit(data []byte) (*Commit, error) {
 	for i, line := range lines {
 		if line == "" {
 			if i+1 < len(lines) {
-				c.Message = strings.Join(lines[i+1:], "n")
+				c.Message = strings.Join(lines[i+1:], "\n")
 			}
 			break
 		}

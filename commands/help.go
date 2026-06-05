@@ -14,6 +14,7 @@ func Help() {
 		"commit": "Record changes to the repository",
 		"status": "Show the working tree status",
 		"diff":   "Show changes between commit and working tree",
+		"log":    "SHow commit logs",
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)

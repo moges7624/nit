@@ -29,6 +29,10 @@ func (c *Commit) SetParent(parent string) {
 	c.parent = parent
 }
 
+func (c *Commit) GetParent() string {
+	return c.parent
+}
+
 func (c Commit) Type() string {
 	return "commit"
 }

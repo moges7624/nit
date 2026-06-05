@@ -34,6 +34,11 @@ func main() {
 			fmt.Fprint(os.Stderr, err.Error())
 		}
 
+	case "log":
+		if err := commands.Log(args); err != nil {
+			fmt.Fprint(os.Stderr, err.Error())
+		}
+
 	case "status":
 		res, err := commands.Status(args)
 		if err != nil {

@@ -22,7 +22,6 @@ func Commit(args []string) error {
 
 	repo, err := repo.Open(".")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
 		return fmt.Errorf("error opening repo: %s", err.Error())
 	}
 

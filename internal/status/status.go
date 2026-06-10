@@ -369,7 +369,6 @@ func (s *Status) Stat() *Stat {
 			arr = []string{}
 		} else {
 			blobObj, _ := objects.Read(&s.repo, headFiles[k])
-			fmt.Println("blob Obj: ", blobObj)
 			blob, _ := blobObj.(*objects.Blob)
 			arr = strings.Split(strings.TrimSpace(string(blob.Data)), "\n")
 		}

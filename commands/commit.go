@@ -25,6 +25,11 @@ func Commit(args []string) error {
 		return fmt.Errorf("error opening repo: %s", err.Error())
 	}
 
+	repoCfg, err := repo.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("error loading config: %s", err.Error())
+	}
+
 	index := index.NewIndex(filepath.Join(repo.NitPath(), "index"))
 	if err = index.Load(); err != nil {
 		return fmt.Errorf("error loading index: %s", err.Error())
@@ -52,7 +57,7 @@ func Commit(args []string) error {
 
 	commit := objects.NewCommit(
 		treeHash,
-		"john <john@mail.com>",
+		fmt.Sprintf("%s <%s>", repoCfg.UserName, repoCfg.UserEmail),
 		message,
 	)
 
